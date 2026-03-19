@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FilmVault — Your Personal Cinema Archive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:   #0d0d0f;
+      --near-black: #111113;
+      --surface: #18181c;
+      --surface2: #202026;
+      --border:  #2e2e38;
+      --gold:    #c9a84c;
+      --gold-dim: #8a6e2e;
+      --gold-light: #e8c97a;
+      --text:    #e8e4dc;
+      --text-dim: #9a9492;
+      --text-muted: #5a5856;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--black);
+      color: var(--text);
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 18px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ── Grain overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      background: linear-gradient(to bottom, rgba(13,13,15,0.95) 0%, transparent 100%);
+    }
+
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--gold);
+      text-decoration: none;
+    }
+
+    .nav-link {
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-link:hover { color: var(--gold); }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      position: relative;
+      text-align: center;
+      padding: 120px 24px 80px;
+      overflow: hidden;
+    }
+
+    /* Radial spotlight */
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 900px;
+      background: radial-gradient(ellipse at center, rgba(201,168,76,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Decorative film-frame lines */
+    .hero-frame {
+      position: absolute;
+      inset: 40px;
+      border: 1px solid rgba(201,168,76,0.08);
+      pointer-events: none;
+    }
+    .hero-frame::before, .hero-frame::after {
+      content: '';
+      position: absolute;
+      background: var(--gold);
+      opacity: 0.25;
+    }
+    .hero-frame::before {
+      top: -1px; left: 60px; right: 60px; height: 1px;
+    }
+    .hero-frame::after {
+      bottom: -1px; left: 60px; right: 60px; height: 1px;
+    }
+
+    /* Corner brackets */
+    .corner {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      opacity: 0.4;
+    }
+    .corner--tl { top: 40px; left: 40px; border-top: 1px solid var(--gold); border-left: 1px solid var(--gold); }
+    .corner--tr { top: 40px; right: 40px; border-top: 1px solid var(--gold); border-right: 1px solid var(--gold); }
+    .corner--bl { bottom: 40px; left: 40px; border-bottom: 1px solid var(--gold); border-left: 1px solid var(--gold); }
+    .corner--br { bottom: 40px; right: 40px; border-bottom: 1px solid var(--gold); border-right: 1px solid var(--gold); }
+
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 760px;
+    }
+
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 0.72rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 28px;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.2s forwards;
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(3.2rem, 8vw, 6.5rem);
+      font-weight: 700;
+      line-height: 1.0;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      margin-bottom: 8px;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.35s forwards;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: var(--gold);
+    }
+
+    .hero-rule {
+      width: 48px;
+      height: 1px;
+      background: var(--gold);
+      margin: 28px auto;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.5s forwards;
+    }
+
+    .hero-sub {
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      max-width: 520px;
+      margin: 0 auto 48px;
+      font-style: italic;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.65s forwards;
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 40px;
+      background: var(--gold);
+      color: var(--black);
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.8s forwards;
+    }
+    .hero-cta:hover {
+      background: var(--gold-light);
+      transform: translateY(-2px);
+    }
+    .hero-cta svg { flex-shrink: 0; }
+
+    .hero-note {
+      display: block;
+      margin-top: 16px;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.95s forwards;
+    }
+
+    /* ── Section common ── */
+    section {
+      padding: 100px 24px;
+    }
+
+    .section-inner {
+      max-width: 1020px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 16px;
+    }
+
+    .section-heading {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 400;
+      line-height: 1.15;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+    .section-heading em { font-style: italic; color: var(--gold); }
+
+    /* ── Features ── */
+    .features {
+      background: var(--near-black);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 2px;
+      margin-top: 60px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .feature-card {
+      background: var(--near-black);
+      padding: 44px 36px;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .feature-card:hover { background: var(--surface); }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 24px;
+      color: var(--gold);
+    }
+
+    .feature-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .feature-body {
+      font-size: 0.95rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    /* ── About ── */
+    .about {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      max-width: 1020px;
+      margin: 0 auto;
+    }
+
+    .about-text p {
+      color: var(--text-dim);
+      margin-bottom: 20px;
+    }
+
+    .stat-row {
+      display: flex;
+      gap: 48px;
+      margin-top: 40px;
+    }
+
+    .stat-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .about-visual {
+      position: relative;
+    }
+
+    .phone-mock {
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto;
+      display: block;
+      aspect-ratio: 9/19;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 36px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    .phone-inner {
+      position: absolute;
+      inset: 12px;
+      background: var(--near-black);
+      border-radius: 26px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .phone-status {
+      height: 28px;
+      background: var(--black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .phone-notch {
+      width: 80px;
+      height: 14px;
+      background: var(--black);
+      border-radius: 0 0 10px 10px;
+    }
+
+    .phone-header {
+      padding: 16px 16px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .phone-app-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.85rem;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+    }
+
+    .phone-vault-list {
+      flex: 1;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .vault-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .vault-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      flex-shrink: 0;
+    }
+
+    .vault-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.62rem;
+      color: var(--text);
+    }
+
+    .vault-count {
+      font-size: 0.52rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .vault-item:nth-child(2) .vault-dot { background: #7a8cbc; }
+    .vault-item:nth-child(3) .vault-dot { background: #bc7a7a; }
+    .vault-item:nth-child(4) .vault-dot { background: #7abc9a; }
+
+    /* glow behind phone */
+    .about-visual::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(201,168,76,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* ── Install ── */
+    .install {
+      background: var(--near-black);
+      border-top: 1px solid var(--border);
+    }
+
+    .install-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 40px;
+      margin-top: 60px;
+    }
+
+    .install-step {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--border);
+      line-height: 1;
+    }
+
+    .step-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem;
+      color: var(--text);
+    }
+
+    .step-body {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+
+    .step-divider {
+      width: 32px;
+      height: 1px;
+      background: var(--gold);
+      opacity: 0.5;
+    }
+
+    .install-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 52px;
+      padding: 15px 36px;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-decoration: none;
+      transition: background 0.2s, color 0.2s;
+    }
+    .install-cta:hover {
+      background: var(--gold);
+      color: var(--black);
+    }
+
+    /* ── Footer ── */
+    footer {
+      padding: 48px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      max-width: 1020px;
+      margin: 0 auto;
+    }
+
+    .footer-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+    }
+
+    .footer-copy {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      nav { padding: 16px 20px; }
+      .hero { padding: 100px 20px 60px; }
+      .hero-frame, .corner { display: none; }
+      .about { grid-template-columns: 1fr; gap: 48px; }
+      .about-visual { order: -1; }
+      .phone-mock { max-width: 220px; }
+      .stat-row { gap: 32px; }
+      footer { flex-direction: column; align-items: flex-start; }
+      section { padding: 70px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <a class="nav-logo" href="#">FilmVault</a>
+    <a class="nav-link" href="#download">Download APK</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-frame"></div>
+    <div class="corner corner--tl"></div>
+    <div class="corner corner--tr"></div>
+    <div class="corner corner--bl"></div>
+    <div class="corner corner--br"></div>
+
+    <div class="hero-inner">
+      <span class="hero-eyebrow">Your personal cinema archive</span>
+      <h1 class="hero-title">Every film<br />has its <em>vault.</em></h1>
+      <div class="hero-rule"></div>
+      <p class="hero-sub">Curate, organise, and revisit your film collection with handcrafted vaults built for the serious cinephile.</p>
+      <a class="hero-cta" href="#download">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download for Android
+      </a>
+      <span class="hero-note">Free · No account required · Sideload APK</span>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="section-inner">
+      <p class="section-label reveal">What's inside</p>
+      <h2 class="section-heading reveal">Built for <em>film lovers</em>,<br />not algorithms.</h2>
+
+      <div class="features-grid">
+
+        <div class="feature-card reveal">
+          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          <div class="feature-title">Named Vaults</div>
+          <p class="feature-body">Group films into any collection you can imagine — by director, decade, mood, or a running list of films you owe your friend.</p>
+        </div>
+
+        <div class="feature-card reveal">
+          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <div class="feature-title">Rich Search</div>
+          <p class="feature-body">Find any film instantly via the OMDb database — posters, years, ratings, and full metadata pulled automatically.</p>
+        </div>
+
+        <div class="feature-card reveal">
+          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          <div class="feature-title">Watchlist & Seen</div>
+          <p class="feature-body">Mark films as watched or save them for later. Your vaults remember so you don't have to.</p>
+        </div>
+
+        <div class="feature-card reveal">
+          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          <div class="feature-title">Offline First</div>
+          <p class="feature-body">Your collection lives on your device. No account, no cloud, no subscription. Just your films, always available.</p>
+        </div>
+
+        <div class="feature-card reveal">
+          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <div class="feature-title">Private by Design</div>
+          <p class="feature-body">No analytics, no tracking, no data collection. Your taste belongs to you.</p>
+        </div>
+
+        <div class="feature-card reveal">
+          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <div class="feature-title">Always Improving</div>
+          <p class="feature-body">FilmVault is actively developed. New features are on the reel — follow along on GitHub.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section>
+    <div class="about">
+      <div class="about-text">
+        <p class="section-label reveal">The idea</p>
+        <h2 class="section-heading reveal">A home for your<br /><em>cinematic memory.</em></h2>
+        <p class="reveal">FilmVault started as a simple question: why is it so hard to keep track of the films you love, the ones you want to see, and the ones you keep recommending to people?</p>
+        <p class="reveal">Streaming apps bury your history. Letterboxd is great but web-first. FilmVault is a native Android app that puts your collection first — fast, local, and beautifully organised.</p>
+        <div class="stat-row reveal">
+          <div>
+            <div class="stat-num">∞</div>
+            <div class="stat-label">Vaults</div>
+          </div>
+          <div>
+            <div class="stat-num">0</div>
+            <div class="stat-label">Accounts needed</div>
+          </div>
+          <div>
+            <div class="stat-num">100%</div>
+            <div class="stat-label">Yours</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-visual reveal">
+        <div class="phone-mock">
+          <div class="phone-inner">
+            <div class="phone-status"><div class="phone-notch"></div></div>
+            <div class="phone-header">
+              <div class="phone-app-title">FilmVault</div>
+            </div>
+            <div class="phone-vault-list">
+              <div class="vault-item">
+                <div class="vault-dot"></div>
+                <div class="vault-name">Kubrick Canon</div>
+                <div class="vault-count">13 films</div>
+              </div>
+              <div class="vault-item">
+                <div class="vault-dot"></div>
+                <div class="vault-name">Saturday Night</div>
+                <div class="vault-count">8 films</div>
+              </div>
+              <div class="vault-item">
+                <div class="vault-dot"></div>
+                <div class="vault-name">Must Watch</div>
+                <div class="vault-count">22 films</div>
+              </div>
+              <div class="vault-item">
+                <div class="vault-dot"></div>
+                <div class="vault-name">Criterion Picks</div>
+                <div class="vault-count">31 films</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download / Install -->
+  <section class="install" id="download">
+    <div class="section-inner">
+      <p class="section-label reveal">Get the app</p>
+      <h2 class="section-heading reveal">Install in <em>three steps.</em></h2>
+
+      <div class="install-steps">
+        <div class="install-step reveal">
+          <div class="step-num">01</div>
+          <div class="step-divider"></div>
+          <div class="step-title">Download the APK</div>
+          <p class="step-body">Tap the button below to download the latest FilmVault APK directly to your Android device.</p>
+        </div>
+        <div class="install-step reveal">
+          <div class="step-num">02</div>
+          <div class="step-divider"></div>
+          <div class="step-title">Allow unknown sources</div>
+          <p class="step-body">In Settings → Security, enable "Install unknown apps" for your browser or file manager. This is a one-time step.</p>
+        </div>
+        <div class="install-step reveal">
+          <div class="step-num">03</div>
+          <div class="step-divider"></div>
+          <div class="step-title">Open & enjoy</div>
+          <p class="step-body">Tap the downloaded file to install. Open FilmVault and start building your first vault.</p>
+        </div>
+      </div>
+
+      <a class="install-cta reveal" href="filmvault.apk">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download FilmVault APK
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-logo">FilmVault</div>
+    <div class="footer-copy">Made with care for film lovers. Open source on GitHub.</div>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+          // Stagger siblings in the same parent
+          const siblings = [...e.target.parentElement.querySelectorAll('.reveal:not(.visible)')];
+          const idx = siblings.indexOf(e.target);
+          setTimeout(() => {
+            e.target.classList.add('visible');
+          }, idx * 80);
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    reveals.forEach(el => io.observe(el));
+  </script>
+</body>
+</html>
